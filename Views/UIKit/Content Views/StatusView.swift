@@ -605,6 +605,7 @@ private extension StatusView {
 
         replyButton.setCountTitle(count: viewModel.repliesCount, isContextParent: isContextParent)
         replyButton.isEnabled = isAuthenticated
+        replyButton.menu = authenticatedIdentitiesMenu { viewModel.reply(identity: $0) }
 
         if viewModel.identityContext.appPreferences.showReblogAndFavoriteCounts || isContextParent {
             reblogButton.setCountTitle(count: viewModel.reblogsCount, isContextParent: isContextParent)
@@ -616,9 +617,11 @@ private extension StatusView {
 
         setReblogButtonColor(reblogged: viewModel.reblogged)
         reblogButton.isEnabled = viewModel.canBeReblogged && isAuthenticated
+        reblogButton.menu = authenticatedIdentitiesMenu { viewModel.toggleReblogged(identityId: $0.id) }
 
         setFavoriteButtonColor(favorited: viewModel.favorited)
         favoriteButton.isEnabled = isAuthenticated
+        favoriteButton.menu = authenticatedIdentitiesMenu { viewModel.toggleFavorited(identityId: $0.id) }
 
         shareButton.tag = viewModel.sharingURL?.hashValue ?? 0
 
@@ -1126,6 +1129,38 @@ private extension StatusView {
         }
 
         return actions
+    }
+
+    func authenticatedIdentitiesMenu(action: @escaping (Identity) -> Void) -> UIMenu {
+        let imageTransformer = SDImageRoundCornerTransformer(
+            radius: .greatestFiniteMagnitude,
+            corners: .allCorners,
+            borderWidth: 0,
+            borderColor: nil)
+
+        return UIMenu(children: statusConfiguration.viewModel
+                        .identityContext
+                        .authenticatedOtherIdentities.map { identity in
+            UIDeferredMenuElement { completion in
+                let menuItemAction = UIAction(title: identity.handle) { _ in
+                    action(identity)
+                }
+
+                if let image = identity.image {
+                    SDWebImageManager.shared.loadImage(
+                        with: image,
+                        options: [.transformAnimatedImage],
+                        context: [.imageTransformer: imageTransformer],
+                        progress: nil) { (image, _, _, _, _, _) in
+                        menuItemAction.image = image
+
+                        completion([menuItemAction])
+                    }
+                } else {
+                    completion([menuItemAction])
+                }
+            }
+        })
     }
 }
 

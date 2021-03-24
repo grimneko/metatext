@@ -4,6 +4,7 @@
 "about.acknowledgments" = "Danksagungen";
 "about.made-by-metabolist" = "Made by Metabolist";
 "about.official-account" = "Offizieller Account";
+"about.rate-the-app" = "Die App bewerten";
 "about.source-code-and-issue-tracker" = "Quellcode & Fehler Tracker";
 "about.website" = "Webseite";
 "accessibility.activate-link-%@" = "Link: %@";
@@ -35,7 +36,7 @@
 "account.mute" = "Stumm";
 "account.mute.indefinite" = "Unbegrenzt";
 "account.mute.confirm-%@" = "Bist du sicher das du %@ stummschalten willst?";
-"account.mute.confirm.explanation" = "Dies wird Beiträge von ihnen bzw Beiträge die sie erwähnen ausblenden, aber deine Beiträge können immer noch gesehen werden und sie können dir folgen.";
+"account.mute.confirm.explanation" = "Dies wird Beiträge von ihnen bzw Beiträge die sie erwähnen ausblenden, aber deine Beiträge können immer noch gesehen werden und sie können dir weiterhin folgen.";
 "account.mute.confirm.hide-notifications" = "Mitteilungen von diesem Nutzer ausblenden?";
 "account.mute.confirm.duration" = "Dauer";
 "account.mute.target-%@" = "%@ stummschalten";

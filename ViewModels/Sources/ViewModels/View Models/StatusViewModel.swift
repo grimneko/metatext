@@ -242,29 +242,45 @@ public extension StatusViewModel {
                 .eraseToAnyPublisher())
     }
 
-    func reply() {
-        let replyViewModel = Self(statusService: statusService,
-                                  identityContext: identityContext,
-                                  eventsSubject: .init())
+    func reply(identity: Identity? = nil) {
+        if let identity = identity {
+            let identityContext = self.identityContext
+            let configuration = self.configuration.reply()
 
-        replyViewModel.configuration = configuration.reply()
+            eventsSubject.send(statusService.asIdentity(id: identity.id).map {
+                let replyViewModel = Self(statusService: $0,
+                                          identityContext: identityContext,
+                                          eventsSubject: .init())
 
-        eventsSubject.send(
-            Just(.compose(inReplyTo: replyViewModel))
-                .setFailureType(to: Error.self)
-                .eraseToAnyPublisher())
+                replyViewModel.configuration = configuration
+
+                return CollectionItemEvent.compose(identity: identity, inReplyTo: replyViewModel)
+            }
+            .eraseToAnyPublisher())
+        } else {
+            let replyViewModel = Self(statusService: statusService,
+                                      identityContext: identityContext,
+                                      eventsSubject: .init())
+
+            replyViewModel.configuration = configuration.reply()
+
+            eventsSubject.send(
+                Just(.compose(inReplyTo: replyViewModel))
+                    .setFailureType(to: Error.self)
+                    .eraseToAnyPublisher())
+        }
     }
 
-    func toggleReblogged() {
+    func toggleReblogged(identityId: Identity.Id? = nil) {
         eventsSubject.send(
-            statusService.toggleReblogged()
+            statusService.toggleReblogged(identityId: identityId)
                 .map { _ in .ignorableOutput }
                 .eraseToAnyPublisher())
     }
 
-    func toggleFavorited() {
+    func toggleFavorited(identityId: Identity.Id? = nil) {
         eventsSubject.send(
-            statusService.toggleFavorited()
+            statusService.toggleFavorited(identityId: identityId)
                 .map { _ in .ignorableOutput }
                 .eraseToAnyPublisher())
     }
@@ -299,14 +315,17 @@ public extension StatusViewModel {
     }
 
     func delete() {
+        let isContextParent = configuration.isContextParent
+
         eventsSubject.send(
             statusService.delete()
-                .map { _ in .ignorableOutput }
+                .map { _ in isContextParent ? .contextParentDeleted : .ignorableOutput }
                 .eraseToAnyPublisher())
     }
 
     func deleteAndRedraft() {
         let identityContext = self.identityContext
+        let isContextParent = configuration.isContextParent
 
         eventsSubject.send(
             statusService.deleteAndRedraft()
@@ -323,7 +342,9 @@ public extension StatusViewModel {
                         inReplyToViewModel = nil
                     }
 
-                    return .compose(inReplyTo: inReplyToViewModel, redraft: redraft)
+                    return .compose(inReplyTo: inReplyToViewModel,
+                                    redraft: redraft,
+                                    redraftWasContextParent: isContextParent)
                 }
                 .eraseToAnyPublisher())
     }

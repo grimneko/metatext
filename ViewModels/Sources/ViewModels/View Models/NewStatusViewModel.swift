@@ -9,7 +9,6 @@ public final class NewStatusViewModel: ObservableObject {
     @Published public var visibility: Status.Visibility
     @Published public private(set) var compositionViewModels = [CompositionViewModel]()
     @Published public private(set) var identityContext: IdentityContext
-    @Published public private(set) var authenticatedIdentities = [Identity]()
     @Published public var canPost = false
     @Published public var alertItem: AlertItem?
     @Published public private(set) var postingState = PostingState.composing
@@ -27,6 +26,7 @@ public final class NewStatusViewModel: ObservableObject {
     public init(allIdentitiesService: AllIdentitiesService,
                 identityContext: IdentityContext,
                 environment: AppEnvironment,
+                identity: Identity?,
                 inReplyTo: StatusViewModel?,
                 redraft: Status?,
                 directMessageTo: AccountViewModel?,
@@ -38,7 +38,7 @@ public final class NewStatusViewModel: ObservableObject {
         events = eventsSubject.eraseToAnyPublisher()
         visibility = redraft?.visibility
             ?? inReplyTo?.visibility
-            ?? identityContext.identity.preferences.postingDefaultVisibility
+            ?? (identity ?? identityContext.identity).preferences.postingDefaultVisibility
 
         if let inReplyTo = inReplyTo {
             switch inReplyTo.visibility {
@@ -75,7 +75,7 @@ public final class NewStatusViewModel: ObservableObject {
             }
 
             mentions.formUnion(inReplyTo.mentions.map(\.acct)
-                                .filter { $0 != identityContext.identity.account?.username }
+                                .filter { $0 != (identity ?? identityContext.identity).account?.username }
                                 .map("@".appending))
 
             compositionViewModel.text = mentions.joined(separator: " ").appending(" ")
@@ -87,14 +87,6 @@ public final class NewStatusViewModel: ObservableObject {
         }
 
         compositionViewModels = [compositionViewModel]
-
-        allIdentitiesService.authenticatedIdentitiesPublisher()
-            .assignErrorsToAlertItem(to: \.alertItem, on: self)
-            .combineLatest($identityContext)
-            .map { authenticatedIdentities, currentIdentity in
-                authenticatedIdentities.filter { $0.id != currentIdentity.identity.id }
-            }
-            .assign(to: &$authenticatedIdentities)
         $compositionViewModels.flatMap { Publishers.MergeMany($0.map(\.$isPostable)) }
             .receive(on: DispatchQueue.main) // hack to punt to next run loop, consider refactoring
             .compactMap { [weak self] _ in self?.compositionViewModels.allSatisfy(\.isPostable) }
@@ -104,6 +96,10 @@ public final class NewStatusViewModel: ObservableObject {
         compositionEventsSubject
             .sink { [weak self] in self?.handle(event: $0) }
             .store(in: &cancellables)
+
+        if let identity = identity {
+            setIdentity(identity)
+        }
     }
 }
 
